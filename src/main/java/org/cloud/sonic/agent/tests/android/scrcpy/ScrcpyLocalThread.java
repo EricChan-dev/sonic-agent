@@ -98,7 +98,17 @@ public class ScrcpyLocalThread extends Thread {
         }
         AtomicBoolean isRetry = new AtomicBoolean(false);
         try {
-            iDevice.executeShellCommand("CLASSPATH=/data/local/tmp/sonic-android-scrcpy.jar app_process / com.genymobile.scrcpy.Server 4.0 log_level=info max_size=0 max_fps=60 tunnel_forward=true send_frame_meta=false control=false show_touches=false stay_awake=false power_off_on_close=false clipboard_autosync=false",
+            // Kill stale scrcpy processes before starting new one
+            try {
+                iDevice.executeShellCommand(
+                    "ps -A -o PID,ARGS | grep com.genymobile.scrcpy | awk '{print $1}' | xargs kill 2>/dev/null",
+                    new IShellOutputReceiver() {
+                        @Override public void addOutput(byte[] bytes, int i, int i1) {}
+                        @Override public void flush() {}
+                        @Override public boolean isCancelled() { return false; }
+                    });
+            } catch (Exception ignored) {}
+            iDevice.executeShellCommand("CLASSPATH=/data/local/tmp/sonic-android-scrcpy.jar app_process / com.genymobile.scrcpy.Server 4.0 log_level=info max_size=0 max_fps=60 tunnel_forward=true send_frame_meta=false control=false audio=false show_touches=false stay_awake=false power_off_on_close=false clipboard_autosync=false",
                     new IShellOutputReceiver() {
                         @Override
                         public void addOutput(byte[] bytes, int i, int i1) {
