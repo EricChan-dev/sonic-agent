@@ -122,8 +122,17 @@ public class AndroidScreenWSServer implements IAndroidWSServer {
         String udId = session.getUserProperties().get("udId").toString();
         switch (msg.getString("type")) {
             case "switch" -> {
-                typeMap.put(udId, msg.getString("detail"));
+                String mode = msg.getString("detail");
                 IDevice iDevice = udIdMap.get(session);
+                if (iDevice != null) {
+                    try {
+                        String apiLevel = iDevice.getProperty("ro.build.version.sdk");
+                        if (apiLevel != null && Integer.parseInt(apiLevel) >= 35) {
+                            mode = "minicap";
+                        }
+                    } catch (Exception ignored) {}
+                }
+                typeMap.put(udId, mode);
                 if (!androidMonitorHandler.isMonitorRunning(iDevice)) {
                     androidMonitorHandler.startMonitor(iDevice, res -> {
                         JSONObject rotationJson = new JSONObject();
