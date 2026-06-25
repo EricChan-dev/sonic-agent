@@ -158,7 +158,17 @@ public class AndroidScreenWSServer implements IAndroidWSServer {
                 }
                 while (ScreenMap.getMap().get(session) != null);
             }
-            typeMap.putIfAbsent(iDevice.getSerialNumber(), "scrcpy");
+            String defaultType = "scrcpy";
+            try {
+                String apiLevel = iDevice.getProperty("ro.build.version.sdk");
+                if (apiLevel != null && Integer.parseInt(apiLevel) >= 35) {
+                    defaultType = "minicap";
+                    log.info("{} Android API {} >= 35, use minicap mode", iDevice.getSerialNumber(), apiLevel);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to detect Android API level, fallback to scrcpy");
+            }
+            typeMap.putIfAbsent(iDevice.getSerialNumber(), defaultType);
             switch (typeMap.get(iDevice.getSerialNumber())) {
                 case "scrcpy" -> {
                     ScrcpyServerUtil scrcpyServerUtil = new ScrcpyServerUtil();
