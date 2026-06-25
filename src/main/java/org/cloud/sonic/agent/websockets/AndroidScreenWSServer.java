@@ -191,7 +191,7 @@ public class AndroidScreenWSServer implements IAndroidWSServer {
             String udId = session.getUserProperties().get("udId") != null
                     ? session.getUserProperties().get("udId").toString()
                     : null;
-            if (udId != null) {
+            if (udId != null && udIdMap.get(session) != null) {
                 androidMonitorHandler.stopMonitor(udIdMap.get(session));
                 AndroidDeviceManagerMap.getRotationMap().remove(udId);
                 typeMap.remove(udId);

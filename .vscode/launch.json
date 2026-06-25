@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "🚀 Sonic Agent (设备代理 :7777)",
+            "request": "launch",
+            "mainClass": "org.cloud.sonic.agent.AgentApplication",
+            "projectName": "sonic-agent",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "JAVA_HOME": "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+            }
+        }
+    ]
+}

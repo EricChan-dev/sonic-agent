@@ -269,11 +269,13 @@ public class AndroidTerminalWSServer implements IAndroidWSServer {
     private void exit(Session session) {
         synchronized (session) {
             ScheduledFuture<?> future = (ScheduledFuture<?>) session.getUserProperties().get("schedule");
-            future.cancel(true);
+            if (future != null) {
+                future.cancel(true);
+            }
             WebSocketSessionMap.removeSession(session);
             removeUdIdMapAndSet(session);
             Future<?> cmd = terminalMap.get(session);
-            if (!cmd.isDone() || !cmd.isCancelled()) {
+            if (cmd != null && (!cmd.isDone() || !cmd.isCancelled())) {
                 try {
                     cmd.cancel(true);
                 } catch (Exception e) {
