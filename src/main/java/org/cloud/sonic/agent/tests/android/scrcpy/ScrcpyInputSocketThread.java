@@ -108,50 +108,38 @@ public class ScrcpyInputSocketThread extends Thread {
             int naLuIndex;
             int bufferLength = 0;
             byte[] buffer = new byte[BUFFER_SIZE];
+            boolean metadataStripped = false;
             while (scrcpyLocalThread.isAlive()) {
                 readLength = inputStream.read(buffer, bufferLength, READ_BUFFER_SIZE);
                 if (readLength > 0) {
                     bufferLength += readLength;
-                    // scrcpy v2.0+ wraps each message with a 1-byte type header:
-                    //   0x00 = video (H.264 NALs), 0x01 = device metadata (JSON)
-                    // Strip type bytes before NAL parsing to keep H.264 Annex B clean.
-                    int pos = 0;
-                    while (pos < bufferLength) {
-                        if (buffer[pos] == 0x01) {
-                            // Device metadata: find the JSON end (next type byte or buffer end)
-                            int jsonEnd = bufferLength;
-                            for (int j = pos + 1; j < bufferLength; j++) {
-                                if (buffer[j] == 0x00 || buffer[j] == 0x01) {
-                                    jsonEnd = j;
-                                    break;
-                                }
+                    // scrcpy v2.0+ wraps tunnel data with 1-byte type headers:
+                    //   0x00 = video, 0x01 = device metadata (sent once at start)
+                    // Strip metadata message if present
+                    if (!metadataStripped && bufferLength > 1 && buffer[0] == 0x01) {
+                        int jsonEnd = -1;
+                        for (int j = 1; j < bufferLength - 1; j++) {
+                            if (buffer[j] == 0x00 && buffer[j+1] == 0x00
+                                    && buffer[j+2] == 0x00 && buffer[j+3] == 0x00
+                                    && buffer[j+4] == 0x01) {
+                                jsonEnd = j;
+                                break;
                             }
-                            String metaJson = new String(buffer, pos + 1, jsonEnd - pos - 1, "UTF-8");
-                            if (metaJson.contains("Device")) {
-                                JSONObject metaSize = new JSONObject();
-                                metaSize.put("msg", "size");
-                                String[] parts = metaJson.replaceAll("[^0-9x]", " ").trim().split("\\s+");
-                                for (String part : parts) {
-                                    if (part.contains("x") && part.indexOf("x") == part.lastIndexOf("x")) {
-                                        String[] wh = part.split("x");
-                                        metaSize.put("width", wh[0]);
-                                        metaSize.put("height", wh[1]);
-                                        break;
-                                    }
-                                }
-                                BytesTool.sendText(session, metaSize.toJSONString());
-                            }
-                            // Remove metadata from buffer
-                            int removeLen = jsonEnd - pos;
-                            System.arraycopy(buffer, pos + removeLen, buffer, 0, bufferLength - pos - removeLen);
-                            bufferLength -= removeLen;
-                        } else if (buffer[pos] == 0x00) {
-                            // Video type byte: strip it, then proceed with NAL parsing on the rest
-                            System.arraycopy(buffer, pos + 1, buffer, pos, bufferLength - pos - 1);
+                        }
+                        if (jsonEnd > 0) {
+                            System.arraycopy(buffer, jsonEnd, buffer, 0, bufferLength - jsonEnd);
+                            bufferLength -= jsonEnd;
+                            metadataStripped = true;
+                        }
+                    }
+                    // scrcpy v2.0+ video type byte: replace 00 00 00 00 01 → 00 00 00 01
+                    // (type byte 0x00 + NAL start code → just NAL start code)
+                    for (int i = 0; i < bufferLength - 5; i++) {
+                        if (buffer[i] == 0x00 && buffer[i+1] == 0x00
+                                && buffer[i+2] == 0x00 && buffer[i+3] == 0x00
+                                && buffer[i+4] == 0x01) {
+                            System.arraycopy(buffer, i+1, buffer, i, bufferLength - i - 1);
                             bufferLength--;
-                        } else {
-                            // Unknown type or no type byte, skip
-                            pos++;
                         }
                     }
                     // NAL unit parsing (H.264 Annex B start codes)
