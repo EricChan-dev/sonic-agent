@@ -185,23 +185,31 @@ public class AndroidScreenWSServer implements IAndroidWSServer {
     private void exit(Session session) {
         synchronized (session) {
             ScheduledFuture<?> future = (ScheduledFuture<?>) session.getUserProperties().get("schedule");
-            future.cancel(true);
-            String udId = session.getUserProperties().get("udId").toString();
-            androidMonitorHandler.stopMonitor(udIdMap.get(session));
+            if (future != null) {
+                future.cancel(true);
+            }
+            String udId = session.getUserProperties().get("udId") != null
+                    ? session.getUserProperties().get("udId").toString()
+                    : null;
+            if (udId != null) {
+                androidMonitorHandler.stopMonitor(udIdMap.get(session));
+                AndroidDeviceManagerMap.getRotationMap().remove(udId);
+                typeMap.remove(udId);
+                picMap.remove(udId);
+            }
             WebSocketSessionMap.removeSession(session);
             removeUdIdMapAndSet(session);
-            AndroidDeviceManagerMap.getRotationMap().remove(udId);
             if (ScreenMap.getMap().get(session) != null) {
                 ScreenMap.getMap().get(session).interrupt();
             }
-            typeMap.remove(udId);
-            picMap.remove(udId);
             try {
                 session.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            log.info("{} : quit.", session.getUserProperties().get("id").toString());
+            log.info("{} : quit.", session.getUserProperties().get("id") != null
+                    ? session.getUserProperties().get("id").toString()
+                    : "unknown");
         }
     }
 }
