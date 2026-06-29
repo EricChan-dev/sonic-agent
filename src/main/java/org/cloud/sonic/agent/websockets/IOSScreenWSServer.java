@@ -159,7 +159,9 @@ public class IOSScreenWSServer implements IIOSWSServer {
     private void exit(Session session) {
         synchronized (session) {
             ScheduledFuture<?> future = (ScheduledFuture<?>) session.getUserProperties().get("schedule");
-            future.cancel(true);
+            if (future != null) {
+                future.cancel(true);
+            }
             WebSocketSessionMap.removeSession(session);
             removeUdIdMapAndSet(session);
             try {
@@ -167,7 +169,9 @@ public class IOSScreenWSServer implements IIOSWSServer {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            log.info("{} : quit.", session.getUserProperties().get("id").toString());
+            log.info("{} : quit.", session.getUserProperties().get("id") != null
+                    ? session.getUserProperties().get("id").toString()
+                    : "unknown");
         }
     }
 }
