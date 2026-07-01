@@ -41,33 +41,6 @@ public interface IAndroidWSServer {
     Set<String> udIdSet = Collections.synchronizedSet(new HashSet<>());
 
     default String getHost() {
-        // Return actual local IP for phone access (cert download, proxy),
-        // not the configured bind host (127.0.0.1 is unreachable from phone).
-        // Prefer en0 (WiFi/hotspot) over VPN interfaces.
-        try {
-            // First pass: en0 (WiFi)
-            for (Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements();) {
-                NetworkInterface iface = ifaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp() || !iface.getName().startsWith("en")) continue;
-                for (Enumeration<InetAddress> addrs = iface.getInetAddresses(); addrs.hasMoreElements();) {
-                    InetAddress addr = addrs.nextElement();
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                        return addr.getHostAddress();
-                    }
-                }
-            }
-            // Fallback: any non-loopback, non-VPN
-            for (Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces(); ifaces.hasMoreElements();) {
-                NetworkInterface iface = ifaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp() || iface.getName().startsWith("utun")) continue;
-                for (Enumeration<InetAddress> addrs = iface.getInetAddresses(); addrs.hasMoreElements();) {
-                    InetAddress addr = addrs.nextElement();
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                        return addr.getHostAddress();
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
         return BytesTool.agentHost;
     }
 

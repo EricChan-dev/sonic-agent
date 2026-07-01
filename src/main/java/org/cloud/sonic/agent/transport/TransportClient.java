@@ -255,37 +255,7 @@ public class TransportClient extends WebSocketClient {
                         agentInfo.put("port", port);
                         agentInfo.put("version", "v" + version);
                         agentInfo.put("systemType", System.getProperty("os.name"));
-                        // Send actual machine IP to server, prefer en0 (WiFi/hotspot) over VPN/corp nets
-                        String machineHost = host;
-                        try {
-                            // First pass: prefer en0 (WiFi) interface
-                            for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                                if (iface.isLoopback() || !iface.isUp()) continue;
-                                if (!iface.getName().startsWith("en")) continue;
-                                for (InetAddress addr : Collections.list(iface.getInetAddresses())) {
-                                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                                        machineHost = addr.getHostAddress();
-                                        break;
-                                    }
-                                }
-                                if (!machineHost.equals(host)) break;
-                            }
-                            // Fallback: any non-loopback, non-VPN interface
-                            if (machineHost.equals(host)) {
-                                for (NetworkInterface iface : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                                    if (iface.isLoopback() || !iface.isUp()) continue;
-                                    if (iface.getName().startsWith("utun")) continue;
-                                    for (InetAddress addr : Collections.list(iface.getInetAddresses())) {
-                                        if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                                            machineHost = addr.getHostAddress();
-                                            break;
-                                        }
-                                    }
-                                    if (!machineHost.equals(host)) break;
-                                }
-                            }
-                        } catch (Exception ignored) {}
-                        agentInfo.put("host", machineHost);
+                        agentInfo.put("host", host);
                         agentInfo.put("hasHub", PHCTool.isSupport() ? 1 : 0);
                         TransportWorker.client.send(agentInfo.toJSONString());
                         IDevice[] iDevices = AndroidDeviceBridgeTool.getRealOnLineDevices();
