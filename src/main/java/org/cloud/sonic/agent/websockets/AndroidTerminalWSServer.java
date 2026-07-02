@@ -32,6 +32,8 @@ import org.cloud.sonic.agent.common.maps.AndroidAPKMap;
 import org.cloud.sonic.agent.common.maps.WebSocketSessionMap;
 import org.cloud.sonic.agent.tools.BytesTool;
 import org.cloud.sonic.agent.tools.PortTool;
+
+import java.io.File;
 import org.cloud.sonic.agent.tools.ScheduleTool;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -127,6 +129,24 @@ public class AndroidTerminalWSServer implements IAndroidWSServer {
         log.info("{} send: {}", session.getUserProperties().get("id").toString(), msg);
         switch (msg.getString("type")) {
             case "appList": {
+                // Send local plugin APKs first, before device app list
+                File pluginsDir = new File("plugins");
+                if (pluginsDir.exists()) {
+                    File[] apkFiles = pluginsDir.listFiles((d, n) -> n.endsWith(".apk"));
+                    if (apkFiles != null) {
+                        for (File apk : apkFiles) {
+                            JSONObject localApk = new JSONObject();
+                            localApk.put("appName", apk.getName());
+                            localApk.put("packageName", "local:" + apk.getName());
+                            localApk.put("appIcon", "");
+                            localApk.put("isLocal", true);
+                            JSONObject localDetail = new JSONObject();
+                            localDetail.put("msg", "appListDetail");
+                            localDetail.put("detail", localApk);
+                            BytesTool.sendText(session, localDetail.toJSONString());
+                        }
+                    }
+                }
                 startService(udIdMap.get(session), session);
                 if (outputStreamMap.get(session) != null) {
                     try {
@@ -344,6 +364,26 @@ public class AndroidTerminalWSServer implements IAndroidWSServer {
                     }
                     managerDetail.put("detail", JSON.parseObject(s));
                     BytesTool.sendText(session, managerDetail.toJSONString());
+                }
+                // Append local plugin APKs to the app list
+                File pluginsDir = new File("plugins");
+                log.info("Appending local APKs from: {}", pluginsDir.getAbsolutePath());
+                if (pluginsDir.exists()) {
+                    File[] apkFiles = pluginsDir.listFiles((d, n) -> n.endsWith(".apk"));
+                    log.info("Found {} local APK(s)", apkFiles != null ? apkFiles.length : 0);
+                    if (apkFiles != null) {
+                        for (File apk : apkFiles) {
+                            JSONObject localApk = new JSONObject();
+                            localApk.put("appName", apk.getName());
+                            localApk.put("packageName", "local:" + apk.getName());
+                            localApk.put("appIcon", "");
+                            localApk.put("isLocal", true);
+                            JSONObject localDetail = new JSONObject();
+                            localDetail.put("msg", "appListDetail");
+                            localDetail.put("detail", localApk);
+                            BytesTool.sendText(session, localDetail.toJSONString());
+                        }
+                    }
                 }
             } catch (IOException e) {
                 log.info("error: {}", e.getMessage());
